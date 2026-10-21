@@ -6,11 +6,11 @@
     "pi-package"
   ],
   "files": [
-    "custom-header.ts"
+    "pi-intro.ts"
   ],
   "pi": {
     "extensions": [
-      "./custom-header.ts"
+      "./pi-intro.ts"
     ]
   },
   "peerDependencies": {
