@@ -66,55 +66,42 @@ function formatPackageListing(listing: string): string {
 export default function (pi: ExtensionAPI) {
 	pi.on("session_start", async (_event, ctx) => {
 		if (ctx.mode === "tui") {
-			ctx.ui.setHeader((tui, theme) => {
-				let expanded = false;
-				let branch = "Checking…";
-				let disposed = false;
-				let packageListing = "Loading…";
-				let packagesLoading = false;
-
-				async function refreshPackages() {
-					if (packagesLoading || disposed) return;
-					packagesLoading = true;
-					try {
-						const result = await pi.exec("pi", ["list"], {
-							cwd: ctx.cwd,
-							timeout: 10000,
-						});
-						packageListing =
-							result.code === 0
-								? formatPackageListing(result.stdout)
-								: "Could not load packages (pi list failed)";
-					} catch {
-						packageListing = "Could not load packages (pi list failed)";
-					} finally {
-						packagesLoading = false;
-						if (!disposed) tui.requestRender();
-					}
-				}
-
-				async function refreshBranch() {
+			// Resolve both values before installing the header so expansion is synchronous.
+			const [branch, packageListing] = await Promise.all([
+				(async () => {
 					try {
 						const result = await pi.exec(
 							"git",
 							["rev-parse", "--abbrev-ref", "HEAD"],
 							{ cwd: ctx.cwd, timeout: 2000 },
 						);
-						branch = result.code === 0 ? result.stdout.trim() : "Not available";
-						if (branch === "HEAD") branch = "Detached HEAD";
+						const name = result.code === 0 ? result.stdout.trim() : "Not available";
+						return name === "HEAD" ? "Detached HEAD" : name;
 					} catch {
-						branch = "Not available";
+						return "Not available";
 					}
-					if (!disposed) tui.requestRender();
-				}
+				})(),
+				(async () => {
+					try {
+						const result = await pi.exec("pi", ["list"], {
+							cwd: ctx.cwd,
+							timeout: 10000,
+						});
+						return result.code === 0
+							? formatPackageListing(result.stdout)
+							: "Could not load packages (pi list failed)";
+					} catch {
+						return "Could not load packages (pi list failed)";
+					}
+				})(),
+			]);
+
+			ctx.ui.setHeader((_tui, theme) => {
+				let expanded = false;
 
 				return {
 					setExpanded(value: boolean) {
 						expanded = value;
-						if (expanded) {
-							void refreshBranch();
-							void refreshPackages();
-						}
 					},
 					render(width: number) {
 						const lines = ["", ...logoLines(theme)];
@@ -170,9 +157,6 @@ export default function (pi: ExtensionAPI) {
 						return lines.map((line) => truncateToWidth(` ${line}`, width));
 					},
 					invalidate() {},
-					dispose() {
-						disposed = true;
-					},
 				};
 			});
 		}

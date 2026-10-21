@@ -1,6 +1,6 @@
 {
   "name": "@npm-ken/pi-intro",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Show only the Pi logo and version in the intro header.",
   "keywords": [
     "pi-package"
