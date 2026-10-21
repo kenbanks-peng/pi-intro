@@ -117,7 +117,7 @@ export default function (pi: ExtensionAPI) {
 						}
 					},
 					render(width: number) {
-						const lines = logoLines(theme);
+						const lines = ["", ...logoLines(theme)];
 						if (expanded) {
 							lines.push(
 								"",
